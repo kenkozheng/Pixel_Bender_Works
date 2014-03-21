@@ -1,0 +1,83 @@
+<languageVersion : 1.0;>
+
+kernel ComicPhoto
+<   namespace : "Your Namespace";
+    vendor : "Kenko";
+    version : 1;
+>
+{
+    parameter float blankThreshold
+    <minValue: 0.0;
+     maxValue: 1.0;
+     defaultValue: 0.9;>;
+     
+    parameter float whiteThreshold
+    <minValue: 0.0;
+     maxValue: 1.0;
+     defaultValue: 0.4;>;
+     
+    parameter float slashThreshold
+    <minValue: 0.0;
+     maxValue: 1.0;
+     defaultValue: 0.2;>;
+     
+    parameter float edgeThreshold
+    <minValue: 0.0;
+     maxValue: 1.0;
+     defaultValue: 0.08;>;
+     
+    
+    input image4 src;
+    input image4 slash;
+    output pixel4 dst;
+
+    void
+    evaluatePixel()
+    {
+        float2 curPoint = outCoord();
+        pixel4 srcPixel = sampleNearest(src,curPoint);
+        pixel4 slashPoint = sampleNearest(slash, float2(mod(curPoint.x, 50.0), mod(curPoint.y, 50.0)));
+        pixel4 upPoint = sampleNearest(src, curPoint + float2(0.0, -1.0));
+        pixel4 downPoint = sampleNearest(src, curPoint + float2(0.0, 1.0));
+        pixel4 leftPoint = sampleNearest(src, curPoint + float2(-1.0, 0.0));
+        pixel4 rightPoint = sampleNearest(src, curPoint + float2(1.0, 0.0));
+        
+        float gray = 0.3086 * srcPixel.r + 0.6094 * srcPixel.g + 0.082 * srcPixel.b;     //标准灰度公式
+        float upGray = 0.3086 * upPoint.r + 0.6094 * upPoint.g + 0.082 * upPoint.b;
+        float downGray = 0.3086 * downPoint.r + 0.6094 * downPoint.g + 0.082 * downPoint.b;
+        float leftGray = 0.3086 * leftPoint.r + 0.6094 * leftPoint.g + 0.082 * leftPoint.b;
+        float rightGray = 0.3086 * rightPoint.r + 0.6094 * rightPoint.g + 0.082 * rightPoint.b;
+          
+          
+          
+        if(gray > blankThreshold)
+        {
+            //if(upGray > blankThreshold && downGray > blankThreshold && leftGray > blankThreshold && rightGray > blankThreshold)
+                dst = float4(1.0, 1.0, 1.0, 0.0);
+            //else
+            //{
+            //    dst = float4(0.1, 0.1, 0.1, 1.0);
+                //if(mod(outCoord().x * outCoord().y, 1.0) > 0.5)
+                //    dst = mix(float4(0.1, 0.1, 0.1, 1.0), float4(1.0, 1.0, 1.0, 1.0), (gray - blankThreshold)/(1.0 - blankThreshold));
+                //else
+                //   dst = float4(1.0, 1.0, 1.0, 1.0);
+            //}
+        }
+        else if(gray > whiteThreshold)
+        {
+            dst = float4(1.0, 1.0, 1.0, 1.0);
+        }
+        else if(gray > slashThreshold)
+            dst = mix(slashPoint, float4(1.0, 1.0, 1.0, 1.0), (gray - slashThreshold)/(whiteThreshold - slashThreshold));
+        else
+            dst = float4(0.1, 0.1, 0.1, 1.0);
+            
+            
+            
+        //明度突变，描边
+        if(gray - upGray > edgeThreshold || gray - rightGray > edgeThreshold || gray - downGray > edgeThreshold || gray - leftGray > edgeThreshold)
+            dst = float4(0.1,0.1,0.1,1.0);
+        //else
+        //    dst = float4(1.0,1.0,1.0,1.0);
+    }
+}
